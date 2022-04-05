@@ -1,0 +1,14 @@
+name: metacritic_request
+description: A starting point for Dart libraries or applications.
+version: 0.2.0
+# homepage: https://www.example.com
+
+environment:
+  sdk: '>=2.17.0-222.0.dev <3.0.0'
+
+# dependencies:
+#   path: ^1.8.0
+
+dev_dependencies:
+  test: ^1.16.0
+dependencies: {http: ^0.13.4}
