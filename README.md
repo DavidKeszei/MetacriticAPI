@@ -11,7 +11,7 @@ and the Flutter guide for
 [developing packages and plugins](https://flutter.dev/developing-packages). 
 -->
 
-Simple library for grabbing data from Metacritic.
+Simple library for grabbing, searching item(s) from Metacritic.
 
 ## Features
 - Get a Metacritic page infromations (name, date, score, rating, etc...)
