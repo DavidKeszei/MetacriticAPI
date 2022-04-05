@@ -17,11 +17,9 @@ void test() async {
   MetacriticEntity? entity = await MetaCriticGrabber.instance
       .getMetacriticData(game: "God Of War", type: "game", platform: "PC");
 
-  //Retrieve all item(s), wich equal the input (name, type, platform)
-  //Input: "call of duty", not specified platform
-  //Result: 256 items
+  //Retrieve all item(s) name , wich equal the input
+  //Input: God Of War, PS4 / Playstation 4
+  //Result: 6 items
   List<String> entities = await MetaCriticGrabber.instance
-      .searchFor(name: "call of duty", type: "game");
-
-  print("");
+      .searchFor(name: "God Of War", type: "game", platform: "PC");
 }
