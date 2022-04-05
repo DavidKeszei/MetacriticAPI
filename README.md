@@ -15,7 +15,7 @@ Simple library for grabbing, searching item(s) from Metacritic.
 
 ## Features
 - Get a Metacritic page infromations (name, date, score, rating, etc...)
-- Get specified items by input
+- Search specified items by input
 
 ## Getting started
 
