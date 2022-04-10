@@ -7,12 +7,12 @@ import 'metacritic_entity.dart';
 ///Simple library for grabbing data from Metacritic.
 class MetaCriticGrabber {
   static MetaCriticGrabber instance = new MetaCriticGrabber();
-  final String authory = "www.metacritic.com";
+  final String _authory = "www.metacritic.com";
 
   //Az adott honlap url-je
   Uri? _selectedGamePageURL = null;
 
-  bool forSearch = false;
+  bool _forSearch = false;
 
   //Kereséshez való fromai adatok
   final String _searchLine = "<ul class=\"search_results module\">";
@@ -28,6 +28,8 @@ class MetaCriticGrabber {
   final String _publisherLine = "<span class=\"label\">Publisher:</span>";
   final String _gernesLine = "<span class=\"label\">Genre(s): </span>";
   final String _ratingLine = "<span class=\"label\">Rating:</span>";
+  final String _coverImageLine =
+      "<div data-react-class=\"GamePageHeader\" data-react-props";
 
   //Months
   final Map<String, int> _months = {
@@ -58,7 +60,7 @@ class MetaCriticGrabber {
         "<a href=\"/game/${platform.toLowerCase()}/${input}\" class=\"hover_none\">";
 
     _selectedGamePageURL = await Uri.https(
-      "www.metacritic.com",
+      _authory,
       "/game/${platform.toLowerCase()}/${input}",
     );
 
@@ -86,7 +88,7 @@ class MetaCriticGrabber {
     String mateRate = "Not reviewed";
 
     //Ha nem csak keresési elözmény adatira vagyunk kiváncsiak
-    if (!forSearch) {
+    if (!_forSearch) {
       //Reviews
       reviews = await _getReviews(_criticReviewLine, "</ol>");
 
@@ -151,7 +153,7 @@ class MetaCriticGrabber {
     );
   }
 
-  //Get a simple data (texts, numbers)
+  //Get a simple data
   Future<String> _getFormattingSimpleData(
       {required String text,
       String startLine = "",
@@ -380,7 +382,7 @@ class MetaCriticGrabber {
       List<String> resultInfos = [];
 
       //Metacritic URL összeillesztés / Metacritic URL appending
-      Uri searchURL = Uri.https(authory, "/search/${type}/${name}/results",
+      Uri searchURL = Uri.https(_authory, "/search/${type}/${name}/results",
           {"search_type": "advanced", "page": pageIndex.toString()});
 
       //HTTPS request from the page
@@ -437,5 +439,96 @@ class MetaCriticGrabber {
     } while (hasSearchResult);
 
     return results;
+  }
+
+  ///Return a list, wich contains cover image(s)
+  ///If the year parameter equal null, then all image we find put in a list and retirn those.
+  Future<List<Uri>> getCovers({required String name, int? year = null}) async {
+    //Founded image(s)
+    List<Uri> result = [];
+
+    //Formatting the input
+    String _name = name.toLowerCase();
+
+    if (_name.contains(':')) {
+      _name = "${_name.split(':')[0].trim()} ${_name.split(':')[1].trim()}"
+          .split(' ')
+          .join('-');
+    } else {
+      _name = _name.split(' ').join('-');
+    }
+
+    //Actually viewed page
+    int gamePageIndex = 0;
+
+    //No more images found
+    bool end = false;
+
+    do {
+      //If the game page index equal 0, then no page numbering is required
+      String unEncodedPath = gamePageIndex == 0
+          ? "/games/${_name}"
+          : "/games/${_name}--${gamePageIndex}";
+
+      //The game page URL
+      Uri _url = Uri.https("www.igdb.com", unEncodedPath);
+
+      //HTTPS request
+      HTTP.Response response = await HTTP.get(_url);
+
+      //If the page is not the search list page
+      if (response.body.contains(_coverImageLine)) {
+        //The part of the text that contains the necessary information
+        String text =
+            await _getDataFrom(response.body, _coverImageLine, "data-hydrate");
+        String line = text.split("cover&quot;:")[1];
+
+        //The year
+        String yearLine =
+            await _getDataFrom(line, "release_date&quot;:&quot;", "&quot;");
+
+        int _year = 0;
+
+        if (!yearLine.contains(',')) {
+          try {
+            _year = int.parse(yearLine.split('&')[0]);
+          } on FormatException {
+            _year = int.parse(yearLine.split('&')[0].split(' ')[1]);
+          }
+        } else {
+          _year = int.parse(yearLine.split('&')[0].split(',')[1]);
+        }
+
+        //If the year parameter not equal null value,
+        //then get only the picture you need.
+        //Else all image we find put the list.
+        if (year != null) {
+          if (year == _year) {
+            String temp = await _getDataFrom(
+                line, "cloudinary_id&quot;:&quot;", "&quot;");
+            String imageId = temp.split('&')[0];
+
+            result.add(Uri.https("images.igdb.com",
+                "/igdb/image/upload/t_cover_big/${imageId}.png"));
+
+            break;
+          }
+        } else {
+          String temp =
+              await _getDataFrom(line, "cloudinary_id&quot;:&quot;", "&quot;");
+          String imageId = temp.split('&')[0];
+
+          result.add(Uri.https("images.igdb.com",
+              "/igdb/image/upload/t_cover_big/${imageId}.png"));
+        }
+
+        //Increase the page number
+        gamePageIndex++;
+      } else {
+        end = true;
+      }
+    } while (!end);
+
+    return result;
   }
 }

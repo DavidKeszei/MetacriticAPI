@@ -17,9 +17,19 @@ void test() async {
   MetacriticEntity? entity = await MetaCriticGrabber.instance
       .getMetacriticData(game: "God Of War", type: "game", platform: "PC");
 
-  //Retrieve all item(s) name , wich equal the input
-  //Input: God Of War, PS4 / Playstation 4
-  //Result: 6 items
+  //Retrieve all item(s) name, wich equal the input
+  //Example
+  //  - Name: God Of War,
+  //  - Platform: PS4 / Playstation 4
+  //
+  //Result: 6 game
   List<String> entities = await MetaCriticGrabber.instance
-      .searchFor(name: "God Of War", type: "game", platform: "PC");
+      .searchFor(name: "God Of War", type: "game", platform: "PS4");
+
+  //Return a list of Uri, wich contains the founded image(s)
+  //Example:
+  //  - Name: Call of Duty: Modern Warfare
+  //  - Year: 2019
+  List<Uri> images = await MetaCriticGrabber.instance
+      .getCovers(name: "Call of Duty: Modern Warfare", year: 2019);
 }
