@@ -14,8 +14,9 @@ and the Flutter guide for
 Simple library for grabbing, searching item(s) from Metacritic.
 
 ## Features
-- Get a Metacritic page infromations (name, date, score, rating, etc...)
+- Get a game infromations from Metacritic.com (name, date, score, rating, etc...)
 - Search specified item(s) by input
+- Get cover image(s) the game
 
 ## Getting started
 
