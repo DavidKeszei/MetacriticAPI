@@ -4,15 +4,13 @@ import 'package:metacritic_request/review.dart';
 
 import 'metacritic_entity.dart';
 
-///Simple library for grabbing data from Metacritic.
-class MetaCriticGrabber {
-  static MetaCriticGrabber instance = new MetaCriticGrabber();
-  final String authory = "www.metacritic.com";
+class MetaCriticAPI {
+  static MetaCriticAPI instance = new MetaCriticAPI();
 
-  //Az adott honlap url-je
+  //The page url
   Uri? _selectedGamePageURL = null;
 
-  bool forSearch = false;
+  final String _authory = "www.metacritic.com";
 
   //Kereséshez való fromai adatok
   final String _searchLine = "<ul class=\"search_results module\">";
@@ -28,6 +26,8 @@ class MetaCriticGrabber {
   final String _publisherLine = "<span class=\"label\">Publisher:</span>";
   final String _gernesLine = "<span class=\"label\">Genre(s): </span>";
   final String _ratingLine = "<span class=\"label\">Rating:</span>";
+  final String _coverImageLine =
+      "<div data-react-class=\"GamePageHeader\" data-react-props";
 
   //Months
   final Map<String, int> _months = {
@@ -45,159 +45,32 @@ class MetaCriticGrabber {
     "December": 12,
   };
 
-  ///Returns an entity that contains information about the specified type, if exist. (Types: Game, Tv, ect.)
-  Future<MetacriticEntity?> getMetacriticData(
-      {String platform = "pc",
-      required String game,
-      required String type}) async {
-    //Metacritic URL appending
-    String input = game.toLowerCase().split(' ').join('-');
-    platform = platform.toLowerCase().split(' ').join('-');
+  //Get the important data section
+  Future<String> _getDataFrom(
+      String text, String startLine, String endTag) async {
+    if (!text.contains(startLine)) return "";
 
-    _nameLine =
-        "<a href=\"/game/${platform.toLowerCase()}/${input}\" class=\"hover_none\">";
+    //Kezdő index
+    int startIndex = text.indexOf(startLine) + startLine.length;
+    int index = startIndex;
+    int letterCount = 0;
 
-    _selectedGamePageURL = await Uri.https(
-      "www.metacritic.com",
-      "/game/${platform.toLowerCase()}/${input}",
-    );
+    //Vég html tag (</li>>)
+    String end = "";
 
-    //Get .HTML file from URL
-    HTTP.Response _response = await HTTP.get(_selectedGamePageURL!);
+    //Az szükséges, formázatlan adat
+    String line = "";
 
-    //If not exist the element, return null value
-    if (_response.statusCode != 200) {
-      return null;
-    }
+    //Szükséges adatok kinyerése
+    do {
+      end = text.substring(index, index + endTag.length);
+      letterCount++;
+      index++;
+    } while (end != endTag);
 
-    return await _setMetacriticEntity(response: _response.body);
-  }
+    line = text.substring(startIndex, startIndex + letterCount);
 
-  //Create a MetacriticEntity
-  Future<MetacriticEntity> _setMetacriticEntity(
-      {required String response}) async {
-    String name = "";
-    String developer = "";
-    String publisher = "";
-    String gernes = "";
-    String rating = "";
-    DateTime? date = null;
-    List<Review> reviews = [];
-    String mateRate = "Not reviewed";
-
-    //Ha nem csak keresési elözmény adatira vagyunk kiváncsiak
-    if (!forSearch) {
-      //Reviews
-      reviews = await _getReviews(_criticReviewLine, "</ol>");
-
-      //Developer(s)
-      developer = await _getFormattingSimpleData(
-          text: response,
-          startLine: _gameDeveloperLine,
-          endTag: "</li>",
-          splitTag: ',');
-
-      //Publisher(s)
-      publisher = await _getFormattingSimpleData(
-          text: response,
-          startLine: _publisherLine,
-          endTag: "</li>",
-          splitTag: ',');
-
-      //Gerne(s)
-      gernes = await _getFormattingSimpleData(
-          text: response,
-          startLine: _gernesLine,
-          endTag: "</li>",
-          splitTag: ',');
-
-      //Rating (pl: "M" rating)
-      rating = await _getFormattingSimpleData(
-          text: response,
-          startLine: _ratingLine,
-          endTag: "</li>",
-          splitTag: ',');
-    }
-
-    //Az értéklés lekérdezése, ha van elegendő értékelés
-    if (response.contains(_metaRatingLine)) {
-      int index = response.indexOf(_metaRatingLine);
-      String line = response.substring(
-        index,
-        index + "<span itemprop=\"ratingValue\">".length + 3,
-      );
-
-      mateRate = line.split('>')[1].split('<')[0];
-    }
-
-    //Name the game
-    name = await _getFormattingSimpleData(
-        text: response, startLine: _nameLine, endTag: "</a>", splitTag: ',');
-
-    //Release date (if game release date equal "TBA {plenned release year}",
-    //then the hour and the second properties equals 4)
-    //The hour, minute, second properties together looks like the 404 error
-    date = await _getFormattingDateData(response, _dateLine, "</li>");
-
-    return new MetacriticGameEntity(
-      name: name,
-      developers: developer,
-      publishers: publisher,
-      date: date,
-      gernes: gernes,
-      rating: rating,
-      reviews: reviews,
-      metaRating: int.tryParse(mateRate) ?? "Not reviewed",
-    );
-  }
-
-  //Get a simple data (texts, numbers)
-  Future<String> _getFormattingSimpleData(
-      {required String text,
-      String startLine = "",
-      String endTag = "",
-      String splitTag = ""}) async {
-    //Az adatok begyüjtése
-    List<String> results = [];
-
-    String temp = await _getDataFrom(text, startLine, endTag);
-
-    if (splitTag != "") {
-      results = temp.split(splitTag);
-    } else {
-      results.add(temp);
-    }
-
-    //Formázás
-    if (temp != "") {
-      if (results.any((element) => element.contains("</a>"))) {
-        for (int i = 0; i < results.length; i++) {
-          String line = results[i];
-          String splitTemp = "";
-
-          if (line.contains("LLC")) {
-            results.removeAt(i);
-            continue;
-          }
-
-          splitTemp = line
-              .split('>')[i == 0 ? 2 : 1]
-              .split('<')[0]
-              .trimLeft()
-              .trimRight();
-
-          results[i] = splitTemp;
-        }
-      } else {
-        for (var i = 0; i < results.length; i++) {
-          String lines = results[i];
-          String temp = lines.split('>')[1].split('<')[0];
-          results[i] = temp.trim();
-        }
-      }
-    }
-
-    return results.join(" & ");
+    return line;
   }
 
   //Get DateTime object
@@ -253,32 +126,161 @@ class MetaCriticGrabber {
     return null;
   }
 
-  //Get the important data section
-  Future<String> _getDataFrom(
-      String text, String startLine, String endTag) async {
-    if (!text.contains(startLine)) return "";
+  //Get a simple data
+  Future<String> _getFormattingSimpleData(
+      {required String text,
+      String startLine = "",
+      String endTag = "",
+      String splitTag = ""}) async {
+    //Az adatok begyüjtése
+    List<String> results = [];
 
-    //Kezdő index
-    int startIndex = text.indexOf(startLine) + startLine.length;
-    int index = startIndex;
-    int letterCount = 0;
+    String temp = await _getDataFrom(text, startLine, endTag);
 
-    //Vég html tag (</li>>)
-    String end = "";
+    if (splitTag != "") {
+      results = temp.split(splitTag);
+    } else {
+      results.add(temp);
+    }
 
-    //Az szükséges, formázatlan adat
-    String line = "";
+    //Formázás
+    if (temp != "") {
+      if (results.any((element) => element.contains("</a>"))) {
+        for (int i = 0; i < results.length; i++) {
+          String line = results[i];
+          String splitTemp = "";
 
-    //Szükséges adatok kinyerése
-    do {
-      end = text.substring(index, index + endTag.length);
-      letterCount++;
-      index++;
-    } while (end != endTag);
+          if (line.contains("LLC")) {
+            results.removeAt(i);
+            continue;
+          }
 
-    line = text.substring(startIndex, startIndex + letterCount);
+          splitTemp = line
+              .split('>')[i == 0 ? 2 : 1]
+              .split('<')[0]
+              .trimLeft()
+              .trimRight();
 
-    return line;
+          results[i] = splitTemp;
+        }
+      } else {
+        for (var i = 0; i < results.length; i++) {
+          String lines = results[i];
+          String temp = lines.split('>')[1].split('<')[0];
+          results[i] = temp.trim();
+        }
+      }
+    }
+
+    return results.join(" & ");
+  }
+
+  ///Returns an entity that contains informations
+  Future<MetacriticEntity> getMetacriticData({
+    String platform = "pc",
+    required String game,
+  }) async {
+    //Metacritic URL appending
+    String input = game.toLowerCase().split(' ').join('-');
+    platform = platform.toLowerCase().split(' ').join('-');
+
+    _nameLine =
+        "<a href=\"/game/${platform.toLowerCase()}/${input}\" class=\"hover_none\">";
+
+    _selectedGamePageURL = await Uri.https(
+      _authory,
+      "/game/${platform.toLowerCase()}/${input}",
+    );
+
+    //Get .HTML file from URL
+    HTTP.Response _response = await HTTP.get(_selectedGamePageURL!);
+
+    //If not exist the element, throw a exception
+    if (_response.statusCode != 200) {
+      throw new Exception(
+          "This page not exist or not loaded! (${_selectedGamePageURL!.authority.toString()}/${_selectedGamePageURL!.path})");
+    }
+
+    return await _fetchEntity(response: _response.body);
+  }
+
+  //Create a GameDataEntity
+  Future<MetacriticEntity> _fetchEntity({required String response}) async {
+    String name = "";
+    String developer = "";
+    String publisher = "";
+    String gernes = "";
+    String rating = "";
+    DateTime? date = null;
+    List<Review> reviews = [];
+    String mateRate = "Not reviewed";
+
+    bool _forSearch = false;
+
+    //Ha nem csak keresési elözmény adatira vagyunk kiváncsiak
+    if (!_forSearch) {
+      //Reviews
+      reviews = await _getReviews(_criticReviewLine, "</ol>");
+
+      //Developer(s)
+      developer = await _getFormattingSimpleData(
+          text: response,
+          startLine: _gameDeveloperLine,
+          endTag: "</li>",
+          splitTag: ',');
+
+      //Publisher(s)
+      publisher = await _getFormattingSimpleData(
+          text: response,
+          startLine: _publisherLine,
+          endTag: "</li>",
+          splitTag: ',');
+
+      //Gerne(s)
+      gernes = await _getFormattingSimpleData(
+          text: response,
+          startLine: _gernesLine,
+          endTag: "</li>",
+          splitTag: ',');
+
+      //Rating (pl: "M" rating)
+      rating = await _getFormattingSimpleData(
+          text: response,
+          startLine: _ratingLine,
+          endTag: "</li>",
+          splitTag: ',');
+    }
+
+    //Az értéklés lekérdezése, ha van elegendő értékelés
+    if (response.contains(_metaRatingLine)) {
+      int index = response.indexOf(_metaRatingLine);
+      String line = response.substring(
+        index,
+        index + "<span itemprop=\"ratingValue\">".length + 3,
+      );
+
+      mateRate = line.split('>')[1].split('<')[0];
+    }
+
+    //Name the game
+    name = await _getFormattingSimpleData(
+        text: response, startLine: _nameLine, endTag: "</a>", splitTag: ',');
+
+    //Release date (if game release date equal "TBA {plenned release year}",
+    //then the hour and the second properties equals 4)
+    //The hour, minute, second properties together looks like the 404 error
+    date = await _getFormattingDateData(response, _dateLine, "</li>");
+
+    return new MetacriticEntity(
+      name: name,
+      developers: developer,
+      publishers: publisher,
+      date: date,
+      gernes: gernes,
+      rating: rating,
+      reviews: reviews,
+      metaRating: int.tryParse(mateRate) ?? "Not reviewed",
+    );
   }
 
   //Get all reviews
@@ -362,14 +364,13 @@ class MetaCriticGrabber {
     return results;
   }
 
-  ///Returns a list, wich constains the name of the search item(s)
+  ///Return a list, wich contains cover image(s).
+  ///If the year parameter equal null, then all image we find put in a list and return those.
   Future<List<String>> searchFor({
-    required String type,
     String platform = "",
     String name = "",
   }) async {
     name = name.toLowerCase().split(' ').join(' ');
-    type = type.toLowerCase();
 
     List<String> results = [];
     bool hasSearchResult = true;
@@ -380,7 +381,7 @@ class MetaCriticGrabber {
       List<String> resultInfos = [];
 
       //Metacritic URL összeillesztés / Metacritic URL appending
-      Uri searchURL = Uri.https(authory, "/search/${type}/${name}/results",
+      Uri searchURL = Uri.https(_authory, "/search/game/${name}/results",
           {"search_type": "advanced", "page": pageIndex.toString()});
 
       //HTTPS request from the page
@@ -399,30 +400,26 @@ class MetaCriticGrabber {
             //Retrieve data from 1 index to end of the temp list
             if (i != 0) {
               //Get name of the game
-              String name =
+              String _name =
                   temp[i].split("<a href=")[1].split('>')[1].split('<')[0];
-              name = name.trim();
-
-              if (name.contains(':')) {
-                name = name.split(':')[0] + name.split(':')[1];
-              }
-
-              //Retrieve the game platform information
-              String _platform = temp[i]
-                  .split("<span class=\"platform\"")[1]
-                  .split('>')[1]
-                  .split('<')[0];
+              _name = _name.trim();
 
               //If specified the platfrom
               if (platform != "") {
+                //Retrieve the game platform information
+                String _platform = temp[i]
+                    .split("<span class=\"platform\"")[1]
+                    .split('>')[1]
+                    .split('<')[0];
+
                 if (Platfroms.Instance.getPlatfrom(platform) == _platform) {
-                  results.add(name);
+                  results.add(_name);
                 }
                 continue;
               }
 
               //If NOT specified the platfrom
-              results.add(name);
+              results.add(_name);
             }
           }
 
@@ -437,5 +434,94 @@ class MetaCriticGrabber {
     } while (hasSearchResult);
 
     return results;
+  }
+
+  Future<List<Uri>> getCovers({required String name, int? year = null}) async {
+    //Founded image(s)
+    List<Uri> result = [];
+
+    //Formatting the input
+    String _name = name.toLowerCase();
+
+    if (_name.contains(':')) {
+      _name = "${_name.split(':')[0].trim()} ${_name.split(':')[1].trim()}"
+          .split(' ')
+          .join('-');
+    } else {
+      _name = _name.split(' ').join('-');
+    }
+
+    //Actually viewed page
+    int gamePageIndex = 0;
+
+    //No more images found
+    bool end = false;
+
+    do {
+      //If the game page index equal 0, then no page numbering is required
+      String unEncodedPath = gamePageIndex == 0
+          ? "/games/${_name}"
+          : "/games/${_name}--${gamePageIndex}";
+
+      //The game page URL
+      Uri _url = Uri.https("www.igdb.com", unEncodedPath);
+
+      //HTTPS request
+      HTTP.Response response = await HTTP.get(_url);
+
+      //If the page is not the search list page
+      if (response.body.contains(_coverImageLine)) {
+        //The part of the text that contains the necessary information
+        String text =
+            await _getDataFrom(response.body, _coverImageLine, "data-hydrate");
+        String line = text.split("cover&quot;:")[1];
+
+        //The year
+        String yearLine =
+            await _getDataFrom(line, "release_date&quot;:&quot;", "&quot;");
+
+        int _year = 0;
+
+        if (!yearLine.contains(',')) {
+          try {
+            _year = int.parse(yearLine.split('&')[0]);
+          } on FormatException {
+            _year = int.parse(yearLine.split('&')[0].split(' ')[1]);
+          }
+        } else {
+          _year = int.parse(yearLine.split('&')[0].split(',')[1]);
+        }
+
+        //If the year parameter not equal null value,
+        //then get only the picture, wich equal the year parameter.
+        //Else all image we find, add the list.
+        if (year != null) {
+          if (year == _year) {
+            String temp = await _getDataFrom(
+                line, "cloudinary_id&quot;:&quot;", "&quot;");
+            String imageId = temp.split('&')[0];
+
+            result.add(Uri.https("images.igdb.com",
+                "/igdb/image/upload/t_cover_big/${imageId}.png"));
+
+            break;
+          }
+        } else {
+          String temp =
+              await _getDataFrom(line, "cloudinary_id&quot;:&quot;", "&quot;");
+          String imageId = temp.split('&')[0];
+
+          result.add(Uri.https("images.igdb.com",
+              "/igdb/image/upload/t_cover_big/${imageId}.png"));
+        }
+
+        //Increase the page number
+        gamePageIndex++;
+      } else {
+        end = true;
+      }
+    } while (!end);
+
+    return result;
   }
 }
