@@ -6,9 +6,7 @@ void main() {
 }
 
 void test() async {
-  DateTime start = DateTime.now();
-
-  //Return a entity, wich contains God Of War game propeties from specifed type and platform (pl: Game - PC)
+  //Return a entity, wich contains God Of War game propeties
   //Example result:
   //  - name: God Of War
   //  - publisher(s): PlayStation Studios & PlayStation PC
@@ -19,14 +17,15 @@ void test() async {
   MetacriticEntity entity = await MetaCriticAPI.instance
       .getMetacriticData(game: "God Of War", platform: "PC");
 
-  //Retrieve all item(s) name, wich equal the input
+  //Retrieve all item(s) name and platform, wich equal the input
   //Example
   //  - Name: God Of War,
   //  - Platform: PS4 / Playstation 4
   //
   //Result: 6 game
-  List<String> entities =
-      await MetaCriticAPI.instance.searchFor(name: "Call of Duty");
+  //REsult format: "game name->platform"
+  List<dynamic> entities = await MetaCriticAPI.instance
+      .searchFor(name: "God Of War", platform: "PC");
 
   //Return a list of Uri, wich contains the founded image(s)
   //Example:
@@ -35,7 +34,7 @@ void test() async {
   List<Uri> images = await MetaCriticAPI.instance
       .getCovers(name: "Call of Duty: Modern Warfare", year: 2019);
 
-  Duration end = start.difference(DateTime.now());
-
-  print("object");
+  //If you don't like the prefabricated object
+  //or have another reason convert the entity a .json object.
+  String jsonEntity = entity.toJSON(plusArgs: {"covers": images});
 }

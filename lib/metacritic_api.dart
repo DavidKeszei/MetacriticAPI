@@ -10,18 +10,15 @@ class MetaCriticAPI {
   //The page url
   Uri? _selectedGamePageURL = null;
 
+  //The authory
   final String _authory = "www.metacritic.com";
 
-  //Kereséshez való fromai adatok
-  final String _searchLine = "<ul class=\"search_results module\">";
-
-  //Alap keresendő adatok
+  //Searchable datas
   String _nameLine = "";
+  final String _searchLine = "<ul class=\"search_results module\">";
   final String _dateLine = "<span class=\"label\">Release Date:</span>";
   final String _metaRatingLine = "<span itemprop=\"ratingValue\">";
   final String _criticReviewLine = "<ol class=\"reviews critic_reviews\">";
-
-  //Játékhoz kapcsoldó keresendő adatok
   final String _gameDeveloperLine = "<span class=\"label\">Developer:</span>";
   final String _publisherLine = "<span class=\"label\">Publisher:</span>";
   final String _gernesLine = "<span class=\"label\">Genre(s): </span>";
@@ -44,6 +41,25 @@ class MetaCriticAPI {
     "November": 11,
     "December": 12,
   };
+
+  final List<String> specialCharachters = [
+    ':',
+    '\'',
+  ];
+
+  //Format the name for correct URL text
+  String _nameFormatToURL(String game) {
+    String result = game;
+
+    for (String specialCharacter in specialCharachters) {
+      if (result.contains(specialCharacter)) {
+        result =
+            "${result.split(specialCharacter)[0].trim()} ${result.split(specialCharacter)[1].trim()}";
+      }
+    }
+
+    return result.split(' ').join('-').toLowerCase();
+  }
 
   //Get the important data section
   Future<String> _getDataFrom(
@@ -82,7 +98,6 @@ class MetaCriticAPI {
     int changeNumber = 0;
 
     List<String> results = [];
-    DateTime? result = null;
 
     //Az adatok begyüjtése
     String _value = await _getDataFrom(text, startLine, endTag);
@@ -181,15 +196,16 @@ class MetaCriticAPI {
     required String game,
   }) async {
     //Metacritic URL appending
-    String input = game.toLowerCase().split(' ').join('-');
+    game = _nameFormatToURL(game);
+
     platform = platform.toLowerCase().split(' ').join('-');
 
     _nameLine =
-        "<a href=\"/game/${platform.toLowerCase()}/${input}\" class=\"hover_none\">";
+        "<a href=\"/game/${platform.toLowerCase()}/${game}\" class=\"hover_none\">";
 
     _selectedGamePageURL = await Uri.https(
       _authory,
-      "/game/${platform.toLowerCase()}/${input}",
+      "/game/${platform.toLowerCase()}/${game}",
     );
 
     //Get .HTML file from URL
@@ -215,41 +231,30 @@ class MetaCriticAPI {
     List<Review> reviews = [];
     String mateRate = "Not reviewed";
 
-    bool _forSearch = false;
+    //Reviews
+    reviews = await _getReviews(_criticReviewLine, "</ol>");
 
-    //Ha nem csak keresési elözmény adatira vagyunk kiváncsiak
-    if (!_forSearch) {
-      //Reviews
-      reviews = await _getReviews(_criticReviewLine, "</ol>");
+    //Developer(s)
+    developer = await _getFormattingSimpleData(
+        text: response,
+        startLine: _gameDeveloperLine,
+        endTag: "</li>",
+        splitTag: ',');
 
-      //Developer(s)
-      developer = await _getFormattingSimpleData(
-          text: response,
-          startLine: _gameDeveloperLine,
-          endTag: "</li>",
-          splitTag: ',');
+    //Publisher(s)
+    publisher = await _getFormattingSimpleData(
+        text: response,
+        startLine: _publisherLine,
+        endTag: "</li>",
+        splitTag: ',');
 
-      //Publisher(s)
-      publisher = await _getFormattingSimpleData(
-          text: response,
-          startLine: _publisherLine,
-          endTag: "</li>",
-          splitTag: ',');
+    //Genre(s)
+    gernes = await _getFormattingSimpleData(
+        text: response, startLine: _gernesLine, endTag: "</li>", splitTag: ',');
 
-      //Gerne(s)
-      gernes = await _getFormattingSimpleData(
-          text: response,
-          startLine: _gernesLine,
-          endTag: "</li>",
-          splitTag: ',');
-
-      //Rating (pl: "M" rating)
-      rating = await _getFormattingSimpleData(
-          text: response,
-          startLine: _ratingLine,
-          endTag: "</li>",
-          splitTag: ',');
-    }
+    //Rating (pl: "M" rating)
+    rating = await _getFormattingSimpleData(
+        text: response, startLine: _ratingLine, endTag: "</li>", splitTag: ',');
 
     //Az értéklés lekérdezése, ha van elegendő értékelés
     if (response.contains(_metaRatingLine)) {
@@ -364,8 +369,7 @@ class MetaCriticAPI {
     return results;
   }
 
-  ///Return a list, wich contains cover image(s).
-  ///If the year parameter equal null, then all image we find put in a list and return those.
+  ///Search for by input, which return a game(s) objects.
   Future<List<String>> searchFor({
     String platform = "",
     String name = "",
@@ -377,9 +381,6 @@ class MetaCriticAPI {
     int pageIndex = 0;
 
     do {
-      //Result infromations
-      List<String> resultInfos = [];
-
       //Metacritic URL összeillesztés / Metacritic URL appending
       Uri searchURL = Uri.https(_authory, "/search/game/${name}/results",
           {"search_type": "advanced", "page": pageIndex.toString()});
@@ -404,22 +405,24 @@ class MetaCriticAPI {
                   temp[i].split("<a href=")[1].split('>')[1].split('<')[0];
               _name = _name.trim();
 
+              //Retrieve the game platform information
+              String _platform = temp[i]
+                  .split("<span class=\"platform\"")[1]
+                  .split('>')[1]
+                  .split('<')[0];
+
               //If specified the platfrom
               if (platform != "") {
-                //Retrieve the game platform information
-                String _platform = temp[i]
-                    .split("<span class=\"platform\"")[1]
-                    .split('>')[1]
-                    .split('<')[0];
-
-                if (Platfroms.Instance.getPlatfrom(platform) == _platform) {
-                  results.add(_name);
+                if (Platfroms.Instance.equal(platform)) {
+                  _platform = Platfroms.Instance.getPlatfrom(_platform, _name);
+                  results.add("${_name}->${_platform}");
                 }
                 continue;
               }
 
               //If NOT specified the platfrom
-              results.add(_name);
+              _platform = Platfroms.Instance.getPlatfrom(_platform, _name);
+              results.add("${_name}->${_platform}");
             }
           }
 
@@ -436,6 +439,8 @@ class MetaCriticAPI {
     return results;
   }
 
+  ///Return a list, wich contains cover image(s).
+  ///If the year parameter equal null, then all image we find put in a list and return those.
   Future<List<Uri>> getCovers({required String name, int? year = null}) async {
     //Founded image(s)
     List<Uri> result = [];

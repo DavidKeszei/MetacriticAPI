@@ -18,9 +18,18 @@ class Platfroms {
     "XONE": "xbox one",
     "X360": "xbox 360",
     "XBOX": "xbox",
+    "SWITCH": "switch",
+    "WIIU": "wii u",
+    "WII": "wii",
+    "DS": "ds",
+    "GAMECUBE": "gamecube",
+    "GC": "gamecube",
+    "N64": "n64",
+    "IOS": "ios",
+    "ANDROID": "android",
   };
 
-  String getPlatfrom(String platfrom) {
+  String getPlatfrom(String platfrom, String name) {
     //Formatting the input
     platfrom = platfrom.toLowerCase();
 
@@ -30,13 +39,32 @@ class Platfroms {
       String value = _platformsNames.values.elementAt(i);
 
       if (platfrom == key.toLowerCase()) {
-        return key;
+        return value;
       } else if (platfrom == value.toLowerCase()) {
-        return key;
+        return value;
       }
     }
 
     //If no result
     throw new Exception("This platform not exist or the input is incorrect!");
+  }
+
+  bool equal(String platfrom) {
+    //Formatting the input
+    platfrom = platfrom.toLowerCase();
+
+    //Search for the correct platform
+    for (var i = 0; i < _platformsNames.length; i++) {
+      String key = _platformsNames.keys.elementAt(i);
+      String value = _platformsNames.values.elementAt(i);
+
+      if (platfrom == key.toLowerCase()) {
+        return true;
+      } else if (platfrom == value.toLowerCase()) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
