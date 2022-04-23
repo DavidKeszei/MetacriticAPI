@@ -1,15 +1,11 @@
-import 'dart:convert';
-
-import 'package:metacritic_request/review.dart';
-
 class MetacriticEntity {
   final String type;
   final String name;
   final String developers;
   final String publishers;
+  final List<String> platfroms;
   final String gernes;
   final String rating;
-  final List<Review> reviews;
   final dynamic metaRating;
   String desc;
   DateTime? date;
@@ -24,7 +20,7 @@ class MetacriticEntity {
     this.name = "",
     this.desc = "",
     this.date = null,
-    this.reviews = const [],
+    this.platfroms = const [],
   });
 
   String toJSON({Map<String, dynamic>? plusArgs = null}) {
@@ -32,6 +28,7 @@ class MetacriticEntity {
       "name": name,
       "developers": developers.split(" & "),
       "publishers": publishers.split(" & "),
+      "platforms": platfroms,
       "genres": gernes.split(' & '),
       "rating": rating,
       "score": metaRating,

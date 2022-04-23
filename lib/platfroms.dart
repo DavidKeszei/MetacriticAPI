@@ -4,32 +4,37 @@ class Platfroms {
     return new Platfroms();
   }
 
+  int get PlatformCount {
+    return _platformsNames.length;
+  }
+
   //Platforms
   final Map<String, String> _platformsNames = {
-    "PC": "pc",
-    "PS5": "playstation 5",
-    "PS4": "playstation 4",
-    "PS3": "playstation 3",
-    "PS2": "playstation 2",
-    "PS": "playstation",
-    "PSP": "psp",
-    "VITA": "playstation vita",
-    "XBSX": "xbox series x",
-    "XONE": "xbox one",
-    "X360": "xbox 360",
-    "XBOX": "xbox",
-    "SWITCH": "switch",
-    "WIIU": "wii u",
-    "WII": "wii",
-    "DS": "ds",
-    "GAMECUBE": "gamecube",
-    "GC": "gamecube",
-    "N64": "n64",
-    "IOS": "ios",
-    "ANDROID": "android",
+    "PC": "PC",
+    "PS5": "Playstation 5",
+    "PS4": "Playstation 4",
+    "PS3": "Playstation 3",
+    "PS2": "Playstation 2",
+    "PS": "Playstation",
+    "PSP": "PSP",
+    "VITA": "Playstation vita",
+    "XBSX": "Xbox Series X",
+    "XONE": "Xbox One",
+    "X360": "Xbox 360",
+    "XBOX": "Xbox",
+    "SWITCH": "Switch",
+    "WIIU": "Wii u",
+    "WII": "Wii",
+    "DS": "DS",
+    "3DS": "3DS",
+    "GAMECUBE": "Gamecube",
+    "GC": "Gamecube",
+    "N64": "N64",
+    "IOS": "iOS",
+    "ANDROID": "Android",
   };
 
-  String getPlatfrom(String platfrom, String name) {
+  String getPlatfromByName(String platfrom) {
     //Formatting the input
     platfrom = platfrom.toLowerCase();
 
@@ -49,22 +54,12 @@ class Platfroms {
     throw new Exception("This platform not exist or the input is incorrect!");
   }
 
-  bool equal(String platfrom) {
-    //Formatting the input
-    platfrom = platfrom.toLowerCase();
-
-    //Search for the correct platform
-    for (var i = 0; i < _platformsNames.length; i++) {
-      String key = _platformsNames.keys.elementAt(i);
-      String value = _platformsNames.values.elementAt(i);
-
-      if (platfrom == key.toLowerCase()) {
-        return true;
-      } else if (platfrom == value.toLowerCase()) {
-        return true;
-      }
+  String getPlatfromByIndex(int index) {
+    try {
+      return _platformsNames.values.elementAt(index);
+    } on IndexError {
+      //If no result
+      throw new Exception("This platform not exist or the input is incorrect!");
     }
-
-    return false;
   }
 }

@@ -228,11 +228,8 @@ class MetaCriticAPI {
     String gernes = "";
     String rating = "";
     DateTime? date = null;
-    List<Review> reviews = [];
     String mateRate = "Not reviewed";
-
-    //Reviews
-    reviews = await _getReviews(_criticReviewLine, "</ol>");
+    List<String> platforms = [];
 
     //Developer(s)
     developer = await _getFormattingSimpleData(
@@ -276,6 +273,35 @@ class MetaCriticAPI {
     //The hour, minute, second properties together looks like the 404 error
     date = await _getFormattingDateData(response, _dateLine, "</li>");
 
+    String platfromTempText =
+        await _getDataFrom(response, "<span class=\"platform\">", "</span>");
+
+    String mainPlatfromInThePage = await _getFormattingSimpleData(
+        text: platfromTempText,
+        startLine: "<a href=",
+        endTag: "</a>",
+        splitTag: "");
+
+    platforms.add(mainPlatfromInThePage);
+
+    platfromTempText = await _getDataFrom(
+        response, "<li class=\"summary_detail product_platforms\"", "</li>");
+
+    platfromTempText = await _getDataFrom(
+        platfromTempText, "<span class=\"data\">", "</span>");
+
+    List<String> platfromLines = platfromTempText.trim().split(',');
+
+    for (var i = 0; i < platfromLines.length; i++) {
+      String a = await _getFormattingSimpleData(
+          text: platfromLines[i],
+          startLine: "class=\"hover_none\"",
+          endTag: "</a>",
+          splitTag: "");
+
+      platforms.add(a);
+    }
+
     return new MetacriticEntity(
       name: name,
       developers: developer,
@@ -283,20 +309,23 @@ class MetaCriticAPI {
       date: date,
       gernes: gernes,
       rating: rating,
-      reviews: reviews,
       metaRating: int.tryParse(mateRate) ?? "Not reviewed",
+      platfroms: platforms,
     );
   }
 
-  //Get all reviews
-  Future<List<Review>> _getReviews(String startLine, String endTag) async {
+  ///Return a list, which contains all reviews from specified [gameName] and [platform]
+  Future<List<Review>> getReviews(String gameName, String platform) async {
     List<Review> results = [];
     List<String> datas = [];
     List<String> reviewsDatas = [];
 
+    platform = _nameFormatToURL(platform);
+    gameName = _nameFormatToURL(gameName);
+
     Uri _criticsURL = await Uri.https(
-      _selectedGamePageURL!.authority,
-      "${_selectedGamePageURL!.path}/critic-reviews",
+      _authory,
+      "game/${platform}/${gameName}/critic-reviews",
     );
 
     Uri _userURL = await Uri.https(
@@ -307,7 +336,8 @@ class MetaCriticAPI {
     //.HTML fájl lekérése a címről / Get .HTML file from URL
     HTTP.Response _response = await HTTP.get(_criticsURL);
 
-    String temp = await _getDataFrom(_response.body, startLine, endTag);
+    String temp =
+        await _getDataFrom(_response.body, _criticReviewLine, "</ol>");
     datas = temp.split("<div class=\"review_stats\">");
 
     //Válogatás
@@ -373,17 +403,18 @@ class MetaCriticAPI {
   Future<List<String>> searchFor({
     String platform = "",
     String name = "",
+    int? pageIndex = null,
   }) async {
     name = name.toLowerCase().split(' ').join(' ');
 
     List<String> results = [];
     bool hasSearchResult = true;
-    int pageIndex = 0;
+    int page = pageIndex ?? 0;
 
     do {
       //Metacritic URL összeillesztés / Metacritic URL appending
-      Uri searchURL = Uri.https(_authory, "/search/game/${name}/results",
-          {"search_type": "advanced", "page": pageIndex.toString()});
+      Uri searchURL = Uri.https(
+          _authory, "/search/game/${name}/results", {"page": page.toString()});
 
       //HTTPS request from the page
       HTTP.Response response = await HTTP.get(searchURL);
@@ -413,21 +444,31 @@ class MetaCriticAPI {
 
               //If specified the platfrom
               if (platform != "") {
-                if (Platfroms.Instance.equal(platform)) {
-                  _platform = Platfroms.Instance.getPlatfrom(_platform, _name);
+                _platform = Platfroms.Instance.getPlatfromByName(_platform)
+                    .toLowerCase();
+
+                if (_platform ==
+                    Platfroms.Instance.getPlatfromByName(platform)
+                        .toLowerCase()) {
                   results.add("${_name}->${_platform}");
                 }
                 continue;
               }
 
               //If NOT specified the platfrom
-              _platform = Platfroms.Instance.getPlatfrom(_platform, _name);
+              _platform =
+                  Platfroms.Instance.getPlatfromByName(_platform).toLowerCase();
               results.add("${_name}->${_platform}");
             }
           }
 
+          if (pageIndex == page && pageIndex != null) {
+            hasSearchResult = false;
+            break;
+          }
+
           //Set next page index
-          pageIndex++;
+          page++;
         } else {
           hasSearchResult = false;
         }
