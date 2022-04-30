@@ -304,10 +304,10 @@ class MetaCriticAPI {
 
     return new MetacriticEntity(
       name: name,
-      developers: developer,
-      publishers: publisher,
+      developers: developer.split(" & "),
+      publishers: publisher.split(" & "),
       date: date,
-      gernes: gernes,
+      gernes: gernes.split(" & "),
       rating: rating,
       metaRating: int.tryParse(mateRate) ?? "Not reviewed",
       platfroms: platforms,

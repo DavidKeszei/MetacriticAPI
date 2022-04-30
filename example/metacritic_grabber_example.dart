@@ -43,6 +43,6 @@ void test() async {
       .getCovers(name: "Call of Duty: Modern Warfare", year: 2019);
 
   //If you don't like the prefabricated object
-  //or have another reason convert the entity a .json object.
+  //or have another reason convert the entity a .json string.
   String jsonEntity = entity.toJSON(plusArgs: {"covers": images});
 }

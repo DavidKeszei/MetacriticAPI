@@ -1,43 +1,44 @@
 class MetacriticEntity {
-  final String type;
   final String name;
-  final String developers;
-  final String publishers;
+  final List<String> developers;
+  final List<String> publishers;
   final List<String> platfroms;
-  final String gernes;
+  final List<String> gernes;
   final String rating;
   final dynamic metaRating;
   String desc;
   DateTime? date;
 
   MetacriticEntity({
-    this.type = "",
-    this.developers = "",
-    this.publishers = "",
-    this.gernes = "",
-    this.rating = "",
-    this.metaRating = "",
     this.name = "",
+    this.metaRating = "",
+    this.rating = "",
+    this.gernes = const [],
     this.desc = "",
     this.date = null,
+    this.publishers = const [],
+    this.developers = const [],
     this.platfroms = const [],
   });
 
   String toJSON({Map<String, dynamic>? plusArgs = null}) {
+    //Fetch all data
     Map<String, dynamic> values = {
       "name": name,
-      "developers": developers.split(" & "),
-      "publishers": publishers.split(" & "),
-      "platforms": platfroms,
-      "genres": gernes.split(' & '),
       "rating": rating,
       "score": metaRating,
+      "developers": developers,
+      "publishers": publishers,
+      "platforms": platfroms,
+      "genres": gernes,
     };
 
+    //Add plus element to Map<String, dynamic>
     if (plusArgs != null) {
       values.addAll(plusArgs);
     }
 
+    //Write the JSON String
     String result = "{\n";
 
     for (int i = 0; i < values.length; i++) {
