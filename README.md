@@ -11,21 +11,20 @@ and the Flutter guide for
 [developing packages and plugins](https://flutter.dev/developing-packages). 
 -->
 
-Simple library for grabbing, searching item(s) from Metacritic.
+Simple API for querying, searching games and more from Metacritic.
 
 ## Features
-- Get a Metacritic page infromations (name, date, score, rating, etc...)
-- Search specified item(s) by input
-
-## Getting started
-
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+- Query all game infromation (name, date, score, rating, etc...)
+- Query reviews (Critics and Users)
+- Get the cover image URL of the game
+- Search games by name & platfrom
+- Convert the game information a JSON string
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder. 
+[Query game informations](query-game-infromations)
+
+#Query game infromations #query-game-infromations
 
 ```dart
 const like = 'sample';
