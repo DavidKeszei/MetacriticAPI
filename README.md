@@ -55,7 +55,7 @@ If we have the __name__ and __release platform__ of a game, we should query the 
 ### Query reviews
 
 #### Method Description
-This method query all critic and user reviews information. (Now just critic reviews queried, user reviews is developing)
+This method query all critic and user reviews information.
 
 #### Parameters
 * __Name__: The game name (required)
