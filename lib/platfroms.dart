@@ -28,6 +28,7 @@ class Platfroms {
     "DS": "DS",
     "3DS": "3DS",
     "GAMECUBE": "Gamecube",
+    "GBA": "Gamebox Advance",
     "GC": "Gamecube",
     "N64": "N64",
     "IOS": "iOS",

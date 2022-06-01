@@ -27,6 +27,7 @@ class MetacriticEntity {
       "name": name,
       "rating": rating,
       "score": metaRating,
+      "desc": desc,
       "developers": developers,
       "publishers": publishers,
       "platforms": platfroms,
@@ -53,7 +54,7 @@ class MetacriticEntity {
           result += "\t\t\"${currentObject[i]}\"${lineEndInArray}\n";
         }
 
-        result += "\t],\n";
+        result += "\t]${lineEnd}\n";
       } else {
         if (currentObject is DateTime) {
           String date =
