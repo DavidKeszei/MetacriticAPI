@@ -357,7 +357,7 @@ class MetaCriticAPI {
       for (int i = 0; i < datas.length; i++) {
         if (i != 0) {
           String reviewData = datas[i].split("<div class=\"review_body\">")[0] +
-              "->" +
+              _separator +
               "<div class=\"review_body\">" +
               datas[i]
                   .split("<div class=\"review_body\">")[1]
@@ -370,7 +370,7 @@ class MetaCriticAPI {
       //Set up all scored, provided review objects
       for (int i = 0; i < reviewsDatas.length; i++) {
         //Get the review content
-        String content = await _getReviewContent(1, reviewsDatas[i]);
+        String content = await _getReviewContent(type.index, reviewsDatas[i]);
 
         //Get all same data
         Map<String, dynamic> baseDatas =
@@ -380,7 +380,7 @@ class MetaCriticAPI {
           new Review(
             author: baseDatas["author"],
             date: baseDatas["date"],
-            reviewType: ReviewType.Critic,
+            reviewType: ReviewType.values.byName(type.name),
             content: content,
             score: baseDatas["score"],
           ),
@@ -420,12 +420,11 @@ class MetaCriticAPI {
       //Set up all scored, provided review objects
       for (int j = 0; j < reviewsDatas.length; j++) {
         //Get the review content
-        String content =
-            await _getReviewContent(i, reviewsDatas[i != 0 ? 36 : j]);
+        String content = await _getReviewContent(i, reviewsDatas[j]);
 
         //Get all same data
         Map<String, dynamic> baseDatas =
-            await _getBaseReviewData(reviewsDatas[i != 0 ? 36 : j]);
+            await _getBaseReviewData(reviewsDatas[j]);
 
         results.add(
           new Review(
@@ -612,7 +611,7 @@ class MetaCriticAPI {
 
   //Get all same info for the comment(author, score, etc...)
   Future<Map<String, dynamic>> _getBaseReviewData(String text) async {
-    String author = text.split("->")[0];
+    String author = text.split(_separator)[0];
 
     //If author data a link
     if (author.contains("</a>")) {
@@ -642,7 +641,6 @@ class MetaCriticAPI {
 
     switch (typeIndex) {
       case 0:
-        //The review content
         result = await _getFormattingSimpleData(
             text: text.split(_separator)[1],
             startLine: "<div class=\"review_body\"",
