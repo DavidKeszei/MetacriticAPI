@@ -60,6 +60,7 @@ This method query all critic and user reviews information. (Now just critic revi
 #### Parameters
 * __Name__: The game name (required)
 * __Platfrom__: The platfrom, where the game is released (Default value: "PC")
+* __Type__: The type of reviews. (Default value: null (all review))
 
 ```dart
   //Return a list, wich contains all reviews the specified game
@@ -79,7 +80,7 @@ Search by name and return a list, which contains the game names and platfroms. _
 #### Parameters
 * __Name__: The game name (required)
 * __Platfrom__: The platfrom, where the game is released (Default value: "")
-* __Page Index__: Reduce the number of search results (Default value: null [all result])
+* __Page Index__: Reduce the number of search results (Default value: null (all result))
 
 ```dart
   //Retrieve all item(s) name and platform, wich equal the input
