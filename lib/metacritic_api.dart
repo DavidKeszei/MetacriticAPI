@@ -13,18 +13,25 @@ class MetaCriticAPI {
   //The authory
   final String _authory = "www.metacritic.com";
 
+  //Separator sign
+  static const String _separator = " <<separator>> ";
+
   //Searchable datas
   String _nameLine = "";
   final String _searchLine = "<ul class=\"search_results module\">";
   final String _dateLine = "<span class=\"label\">Release Date:</span>";
   final String _metaRatingLine = "<span itemprop=\"ratingValue\">";
-  final String _criticReviewLine = "<ol class=\"reviews critic_reviews\">";
   final String _gameDeveloperLine = "<span class=\"label\">Developer:</span>";
   final String _publisherLine = "<span class=\"label\">Publisher:</span>";
   final String _gernesLine = "<span class=\"label\">Genre(s): </span>";
   final String _ratingLine = "<span class=\"label\">Rating:</span>";
   final String _coverImageLine =
       "<div data-react-class=\"GamePageHeader\" data-react-props";
+
+  final Map<String, String> _reviewLines = {
+    "Critic": "<ol class=\"reviews critic_reviews\">",
+    "User": "<ol class=\"reviews user_reviews\">"
+  };
 
   //Months
   final Map<String, int> _months = {
@@ -42,10 +49,8 @@ class MetaCriticAPI {
     "December": 12,
   };
 
-  final List<String> specialCharachters = [
-    ':',
-    '\'',
-  ];
+  //Special charachters for name formatmting
+  final List<String> specialCharachters = [':', '\'', '(', ')'];
 
   //Format the name for correct URL text
   String _nameFormatToURL(String game) {
@@ -58,7 +63,7 @@ class MetaCriticAPI {
       }
     }
 
-    return result.split(' ').join('-').toLowerCase();
+    return result.trim().split(' ').join('-').toLowerCase();
   }
 
   //Get the important data section
@@ -147,7 +152,7 @@ class MetaCriticAPI {
       String startLine = "",
       String endTag = "",
       String splitTag = ""}) async {
-    //Az adatok begyüjtése
+    //Data collecting
     List<String> results = [];
 
     String temp = await _getDataFrom(text, startLine, endTag);
@@ -158,8 +163,9 @@ class MetaCriticAPI {
       results.add(temp);
     }
 
-    //Formázás
+    //Formatting
     if (temp != "") {
+      //If the data is a hyper link
       if (results.any((element) => element.contains("</a>"))) {
         for (int i = 0; i < results.length; i++) {
           String line = results[i];
@@ -214,7 +220,7 @@ class MetaCriticAPI {
     //If not exist the element, throw a exception
     if (_response.statusCode != 200) {
       throw new Exception(
-          "This page not exist or not loaded! (${_selectedGamePageURL!.authority.toString()}/${_selectedGamePageURL!.path})");
+          "This page not exist or not loaded! (${_selectedGamePageURL!.authority.toString()}${_selectedGamePageURL!.path}");
     }
 
     return await _fetchEntity(response: _response.body);
@@ -227,8 +233,9 @@ class MetaCriticAPI {
     String publisher = "";
     String gernes = "";
     String rating = "";
+    String desc = "";
     DateTime? date = null;
-    String mateRate = "Not reviewed";
+    String mateRate = "";
     List<String> platforms = [];
 
     //Developer(s)
@@ -253,7 +260,7 @@ class MetaCriticAPI {
     rating = await _getFormattingSimpleData(
         text: response, startLine: _ratingLine, endTag: "</li>", splitTag: ',');
 
-    //Az értéklés lekérdezése, ha van elegendő értékelés
+    //Get all review, if all review count is equal 4
     if (response.contains(_metaRatingLine)) {
       int index = response.indexOf(_metaRatingLine);
       String line = response.substring(
@@ -263,6 +270,12 @@ class MetaCriticAPI {
 
       mateRate = line.split('>')[1].split('<')[0];
     }
+
+    //Description of the game
+    desc = await _getFormattingSimpleData(
+        text: response,
+        startLine: "<span class=\"blurb blurb_expanded\"",
+        endTag: "</span>");
 
     //Name the game
     name = await _getFormattingSimpleData(
@@ -306,6 +319,7 @@ class MetaCriticAPI {
       name: name,
       developers: developer.split(" & "),
       publishers: publisher.split(" & "),
+      desc: desc,
       date: date,
       gernes: gernes.split(" & "),
       rating: rating,
@@ -315,7 +329,10 @@ class MetaCriticAPI {
   }
 
   ///Return a list, which contains all reviews from specified [gameName] and [platform]
-  Future<List<Review>> getReviews(String gameName, String platform) async {
+  Future<List<Review>> getReviews(
+      {required String gameName,
+      String platform = "pc",
+      ReviewType? type = null}) async {
     List<Review> results = [];
     List<String> datas = [];
     List<String> reviewsDatas = [];
@@ -323,77 +340,104 @@ class MetaCriticAPI {
     platform = _nameFormatToURL(platform);
     gameName = _nameFormatToURL(gameName);
 
-    Uri _criticsURL = await Uri.https(
-      _authory,
-      "game/${platform}/${gameName}/critic-reviews",
-    );
+    if (type != null) {
+      Uri URL = await Uri.https(
+        _authory,
+        "game/${platform}/${gameName}/${type.name.toLowerCase()}-reviews",
+      );
 
-    Uri _userURL = await Uri.https(
-      _selectedGamePageURL!.authority,
-      "${_selectedGamePageURL!.path}/user-reviews",
-    );
+      //Get .HTML file from URL
+      HTTP.Response _response = await HTTP.get(URL);
 
-    //.HTML fájl lekérése a címről / Get .HTML file from URL
-    HTTP.Response _response = await HTTP.get(_criticsURL);
+      String temp =
+          await _getDataFrom(_response.body, _reviewLines[type.name]!, "</ol>");
+      datas = temp.split("<div class=\"review_stats\">");
 
-    String temp =
-        await _getDataFrom(_response.body, _criticReviewLine, "</ol>");
-    datas = temp.split("<div class=\"review_stats\">");
+      //Válogatás
+      for (int i = 0; i < datas.length; i++) {
+        if (i != 0) {
+          String reviewData = datas[i].split("<div class=\"review_body\">")[0] +
+              _separator +
+              "<div class=\"review_body\">" +
+              datas[i]
+                  .split("<div class=\"review_body\">")[1]
+                  .split("<div class=\"review_section review_actions\">")[0];
 
-    //Válogatás
-    for (int i = 0; i < datas.length; i++) {
-      if (i != 0) {
-        String reviewData = datas[i].split("<div class=\"review_body\">")[0] +
-            "<->" +
-            "<div class=\"review_body\">" +
-            datas[i]
-                .split("<div class=\"review_body\">")[1]
-                .split("<div class=\"review_section review_actions\">")[0];
-        ;
-
-        reviewsDatas.add(reviewData.trim());
+          reviewsDatas.add(reviewData.trim());
+        }
       }
+
+      //Set up all scored, provided review objects
+      for (int i = 0; i < reviewsDatas.length; i++) {
+        //Get the review content
+        String content = await _getReviewContent(type.index, reviewsDatas[i]);
+
+        //Get all same data
+        Map<String, dynamic> baseDatas =
+            await _getBaseReviewData(reviewsDatas[i]);
+
+        results.add(
+          new Review(
+            author: baseDatas["author"],
+            date: baseDatas["date"],
+            reviewType: ReviewType.values.byName(type.name),
+            content: content,
+            score: baseDatas["score"],
+          ),
+        );
+      }
+
+      return results;
     }
 
-    //Set up all scored, provided review objects
-    for (int i = 0; i < reviewsDatas.length; i++) {
-      //The review content
-      String content = await _getFormattingSimpleData(
-          text: reviewsDatas[i].split("<->")[1],
-          startLine: "<div class=\"review_body\"",
-          endTag: "</div>");
+    for (int i = 0; i < 2; i++) {
+      Uri URL = await Uri.https(
+        _authory,
+        "game/${platform}/${gameName}/${ReviewType.values[i].name.toLowerCase()}-reviews",
+      );
 
-      //Get author
-      String author = reviewsDatas[i].split("<->")[0];
+      //Get .HTML file from URL
+      HTTP.Response _response = await HTTP.get(URL);
 
-      //If author data a link
-      if (author.contains("</a>")) {
-        author = author.split("</a>")[0].split('>')[3];
-      } else {
-        //If not
-        author = author.split("<div class=\"source\">")[1].split('<')[0];
+      String temp = await _getDataFrom(
+          _response.body, _reviewLines[ReviewType.values[i].name]!, "</ol>");
+      datas = temp.split("<div class=\"review_stats\">");
+
+      //Válogatás
+      for (int j = 0; j < datas.length; j++) {
+        if (j != 0) {
+          String reviewData = datas[j].split("<div class=\"review_body\">")[0] +
+              _separator +
+              "<div class=\"review_body\">" +
+              datas[j]
+                  .split("<div class=\"review_body\">")[1]
+                  .split("<div class=\"review_section review_actions\">")[0];
+
+          reviewsDatas.add(reviewData.trim());
+        }
       }
 
-      //Get date the review
-      DateTime? date = await _getFormattingDateData(
-          reviewsDatas[i].split("<->")[0], "<div class=\"date\"", "</div>");
+      //Set up all scored, provided review objects
+      for (int j = 0; j < reviewsDatas.length; j++) {
+        //Get the review content
+        String content = await _getReviewContent(i, reviewsDatas[j]);
 
-      //Given score
-      double score = double.parse(
-        await _getFormattingSimpleData(
-            text: reviewsDatas[i].split("<->")[0],
-            startLine: "<div class=\"metascore_w",
-            endTag: "</div>"),
-      );
+        //Get all same data
+        Map<String, dynamic> baseDatas =
+            await _getBaseReviewData(reviewsDatas[j]);
 
-      results.add(
-        new Review(
-            author: author,
-            date: date,
-            reviewType: ReviewType.Critic,
+        results.add(
+          new Review(
+            author: baseDatas["author"],
+            date: baseDatas["date"],
+            reviewType: ReviewType.values[i],
             content: content,
-            score: score),
-      );
+            score: baseDatas["score"],
+          ),
+        );
+      }
+
+      reviewsDatas.clear();
     }
 
     return results;
@@ -408,74 +452,68 @@ class MetaCriticAPI {
     name = name.toLowerCase().split(' ').join(' ');
 
     List<String> results = [];
-    bool hasSearchResult = true;
     int page = pageIndex ?? 0;
 
     do {
-      //Metacritic URL összeillesztés / Metacritic URL appending
+      //Metacritic URL appending
       Uri searchURL = Uri.https(
           _authory, "/search/game/${name}/results", {"page": page.toString()});
 
-      //HTTPS request from the page
+      //HTTPS request
       HTTP.Response response = await HTTP.get(searchURL);
 
       //If connection status is success
-      if (response.statusCode == 200) {
-        String resultText =
-            await _getDataFrom(response.body, _searchLine, "</ul>");
-
-        //Selected infotmations
-        List<String> temp = resultText.split("<div class=\"result_wrap\">");
-
-        if (temp.length != 1) {
-          for (var i = 0; i < temp.length; i++) {
-            //Retrieve data from 1 index to end of the temp list
-            if (i != 0) {
-              //Get name of the game
-              String _name =
-                  temp[i].split("<a href=")[1].split('>')[1].split('<')[0];
-              _name = _name.trim();
-
-              //Retrieve the game platform information
-              String _platform = temp[i]
-                  .split("<span class=\"platform\"")[1]
-                  .split('>')[1]
-                  .split('<')[0];
-
-              //If specified the platfrom
-              if (platform != "") {
-                _platform = Platfroms.Instance.getPlatfromByName(_platform)
-                    .toLowerCase();
-
-                if (_platform ==
-                    Platfroms.Instance.getPlatfromByName(platform)
-                        .toLowerCase()) {
-                  results.add("${_name}->${_platform}");
-                }
-                continue;
-              }
-
-              //If NOT specified the platfrom
-              _platform =
-                  Platfroms.Instance.getPlatfromByName(_platform).toLowerCase();
-              results.add("${_name}->${_platform}");
-            }
-          }
-
-          if (pageIndex == page && pageIndex != null) {
-            hasSearchResult = false;
-            break;
-          }
-
-          //Set next page index
-          page++;
-        } else {
-          hasSearchResult = false;
-        }
-      } else {
-        hasSearchResult = false;
+      if (response.statusCode != 200) {
+        break;
       }
-    } while (hasSearchResult);
+
+      //Get the required text section
+      String resultText =
+          await _getDataFrom(response.body, _searchLine, "</ul>");
+
+      //Selected infotmations
+      List<String> temp = resultText.split("<div class=\"result_wrap\">");
+
+      if (temp.length < 2) {
+        break;
+      }
+
+      for (int i = 1; i < temp.length; i++) {
+        //Get name of the game
+        String _name = temp[i].split("<a href=")[1].split('>')[1].split('<')[0];
+        _name = _name.trim();
+
+        //Retrieve the game platform information
+        String _platform = temp[i]
+            .split("<span class=\"platform\"")[1]
+            .split('>')[1]
+            .split('<')[0];
+
+        //If specified the platfrom
+        if (platform != "") {
+          _platform =
+              Platfroms.Instance.getPlatfromByName(_platform).toLowerCase();
+
+          if (_platform ==
+              Platfroms.Instance.getPlatfromByName(platform).toLowerCase()) {
+            results.add("${_name}->${_platform}");
+          }
+          continue;
+        }
+
+        //If NOT specified the platfrom
+        _platform =
+            Platfroms.Instance.getPlatfromByName(_platform).toLowerCase();
+        results.add("${_name}->${_platform}");
+      }
+
+      if (pageIndex == page && pageIndex != null) {
+        break;
+      }
+
+      //Set next page index
+      page++;
+    } while (true);
 
     return results;
   }
@@ -567,6 +605,64 @@ class MetaCriticAPI {
         end = true;
       }
     } while (!end);
+
+    return result;
+  }
+
+  //Get all same info for the comment(author, score, etc...)
+  Future<Map<String, dynamic>> _getBaseReviewData(String text) async {
+    String author = text.split(_separator)[0];
+
+    //If author data a link
+    if (author.contains("</a>")) {
+      author = author.split("</a>")[0].split('>')[3];
+    } else {
+      //If not a link
+      author = author.split("<div class=\"source\">")[1].split('<')[0];
+    }
+
+    //Get date the review
+    DateTime? date = await _getFormattingDateData(
+        text.split("->")[0], "<div class=\"date\"", "</div>");
+
+    //Given score
+    double score = double.parse(
+      await _getFormattingSimpleData(
+          text: text.split("->")[0],
+          startLine: "<div class=\"metascore_w",
+          endTag: "</div>"),
+    );
+
+    return {"author": author, "date": date, "score": score};
+  }
+
+  Future<String> _getReviewContent(int typeIndex, String text) async {
+    String result = "";
+
+    switch (typeIndex) {
+      case 0:
+        result = await _getFormattingSimpleData(
+            text: text.split(_separator)[1],
+            startLine: "<div class=\"review_body\"",
+            endTag: "</div>");
+        break;
+      case 1:
+        if (text.contains("<span class=\"blurb blurb_expanded\"")) {
+          result = await _getFormattingSimpleData(
+              text: text.split(_separator)[1],
+              startLine: "<span class=\"blurb blurb_expanded\"",
+              endTag: "</span>");
+
+          break;
+        }
+
+        result = await _getFormattingSimpleData(
+            text: text.split(_separator)[1],
+            startLine: "<span",
+            endTag: "</span>");
+
+        break;
+    }
 
     return result;
   }

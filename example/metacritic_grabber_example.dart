@@ -21,8 +21,9 @@ void test() async {
   //Return a list, wich contains all reviews the specified game
   //(Example: God of War, PC version);
   List<Review> reviews = await MetaCriticAPI.instance.getReviews(
-    entity.name,
-    entity.platfroms[0],
+    gameName: entity.name,
+    platform: entity.platfroms[0],
+    type: null,
   );
 
   //Retrieve all item(s) name and platform, wich equal the input
@@ -45,4 +46,6 @@ void test() async {
   //If you don't like the prefabricated object
   //or have another reason convert the entity a .json string.
   String jsonEntity = entity.toJSON(plusArgs: {"covers": images});
+
+  print("");
 }
