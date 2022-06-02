@@ -134,3 +134,7 @@ Return a JSON string from a MetacriticEntity object.
 TODO: Tell users more about the package: where to find more information, how to 
 contribute to the package, how to file issues, what response they can expect 
 from the package authors, and more.-->
+
+## Additional information
+
+If you have any questions, contact me in email :) (daviddkeszei@gmail.com)
