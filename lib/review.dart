@@ -1,3 +1,5 @@
+import 'package:metacritic_request/enums.dart';
+
 class Review {
   final String author;
   final String content;
@@ -13,5 +15,3 @@ class Review {
     this.content = "",
   });
 }
-
-enum ReviewType { Critic, User }
