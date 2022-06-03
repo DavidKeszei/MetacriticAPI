@@ -20,6 +20,7 @@ Simple API for querying, searching games and more from Metacritic.
 * Get the cover image URL of the game (from [IGDB](https://www.igdb.com))
 * Search games by name & platfrom
 * Convert the game information a JSON string
+* Get games by one category (pl: Action)
 
 ## Contents
 
@@ -28,6 +29,7 @@ Simple API for querying, searching games and more from Metacritic.
 * [Searching](#searching)
 * [Get cover](#query-urls-of-cover-image)
 * [Convert to a JSON string](#convert-all-data-a-json-string)
+* [Query games by one specified category](#query-games-by-one-specified-category)
 
 ### Query game informations
 
@@ -126,6 +128,29 @@ Return a JSON string from a MetacriticEntity object.
   //If you don't like the prefabricated object
   //or have another reason convert the entity a .json string.
   String jsonEntity = entity.toJSON(plusArgs: {"covers": images});
+```
+
+### Query games by one specified category
+
+#### Method Description
+Return a list, wich contains games name and platfrom by one specified category (Action, First-Person, etc..)
+
+#### Parameters
+* __Category__: The games category. (required)
+* __Sorted By__: The order of the games queried (Default value: Date)
+* __Platform__: The platfrom of games. (Default value: "all")
+* __Page Number__: Query games from the specified page (Default value: null)
+
+```dart
+  //Return a list, wich contains games name and platfrom by one specified category (Action, First-Person, etc..)
+  //Example:
+  //  - Category: Action
+  //  - Selected Page: 114 (113 + 1)
+  List<String> _gameByCategory =
+      await MetaCriticAPI.instance.getGamesByCategory(
+    category: GameCategory.Action,
+    pageNumber: 113,
+  );
 ```
 
 <!--## Additional information
