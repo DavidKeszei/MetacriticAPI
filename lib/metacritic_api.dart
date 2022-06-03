@@ -2,6 +2,7 @@ import 'package:http/http.dart' as HTTP;
 import 'package:metacritic_request/platfroms.dart';
 import 'package:metacritic_request/review.dart';
 
+import 'enums.dart';
 import 'metacritic_entity.dart';
 
 class MetaCriticAPI {
@@ -76,7 +77,7 @@ class MetaCriticAPI {
     int index = startIndex;
     int letterCount = 0;
 
-    //Vég html tag (</li>>)
+    //Vég html tag (</li>)
     String end = "";
 
     //Az szükséges, formázatlan adat
@@ -89,7 +90,7 @@ class MetaCriticAPI {
       index++;
     } while (end != endTag);
 
-    line = text.substring(startIndex, startIndex + letterCount);
+    line = text.substring(startIndex, startIndex + letterCount - 1);
 
     return line;
   }
@@ -464,14 +465,14 @@ class MetaCriticAPI {
 
       //If connection status is success
       if (response.statusCode != 200) {
-        break;
+        throw new Exception("The connection is field!");
       }
 
       //Get the required text section
       String resultText =
           await _getDataFrom(response.body, _searchLine, "</ul>");
 
-      //Selected infotmations
+      //Selected informations
       List<String> temp = resultText.split("<div class=\"result_wrap\">");
 
       if (temp.length < 2) {
@@ -516,6 +517,79 @@ class MetaCriticAPI {
     } while (true);
 
     return results;
+  }
+
+  ///Return a list, wich contains games name and platfrom by one specified category (Action, First-Person, etc..)
+  ///Category: Game Category
+  ///Sorted By: Sort
+  ///Platfrom: The specified platfrom
+  ///Page Number: Get just the selected page
+  Future<List<String>> getGamesByCategory({
+    required GameCategory category,
+    SortedBy sortedBy = SortedBy.Date,
+    String platform = "all",
+    int? pageNumber = null,
+  }) async {
+    //The results
+    List<String> _results = [];
+
+    //The games structure section numbers
+    List<String> _pageSections = ["one", "two", "three", "four"];
+
+    if (platform != "all") {
+      platform = Platfroms.Instance.getPlatfromByName(platform);
+    }
+
+    if (pageNumber != null) {
+      //Set the URL
+      Uri _currentPageURL = Uri.https(
+          "www.metacritic.com",
+          "/browse/games/genre/${sortedBy.name.toLowerCase()}/${category.name.toLowerCase()}/${_nameFormatToURL(platform)}",
+          {"page": "$pageNumber"});
+
+      //Send the request
+      HTTP.Response _response = await HTTP.get(_currentPageURL);
+
+      for (int i = 0; i < _pageSections.length; i++) {
+        String endTag = i < _pageSections.length - 1
+            ? "<div class=\"browse_list_wrapper ${_pageSections[i + 1]}"
+            : "<div class=\"marg_top1\">";
+
+        //Trim for the data
+        String temp = await _getDataFrom(_response.body,
+            "<div class=\"browse_list_wrapper ${_pageSections[i]}", endTag);
+
+        temp = await _getDataFrom(
+            temp, "<table class=\"clamp-list\">", "</table>");
+
+        temp = temp.trim();
+
+        //Split the string to games sections
+        List<String> gamesDatas = temp.split("<tr class=\"spacer\"></tr>");
+
+        //Get the games (name + platfrom)
+        for (int j = 0; j < gamesDatas.length; j++) {
+          if (!gamesDatas[j].contains("class=\"title\"><h3>") ||
+              !gamesDatas[j].contains("class=\"title\"><h3>")) {
+            continue;
+          }
+
+          //Get name
+          String name = await _getDataFrom(
+              gamesDatas[j], "class=\"title\"><h3>", "</h3>");
+
+          //Get platform
+          String _platform = await _getDataFrom(
+              gamesDatas[j], "<span class=\"data\">", "</span>");
+
+          _results.add("${name}->${_platform.trim()}");
+        }
+
+        print("");
+      }
+    }
+
+    return _results;
   }
 
   ///Return a list, wich contains cover image(s).
