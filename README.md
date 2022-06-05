@@ -134,13 +134,14 @@ Return a JSON string from a MetacriticEntity object.
 ### Query games by one specified category
 
 #### Method Description
-Return a list, wich contains games name and platfrom by one specified category (Action, First-Person, etc..)
+Return a list, wich contains games name and platfrom by one specified category. (Action, First-Person, etc..)
+If the page not contains any games, because this page is not exist (in vain loaded), then the result is an empty list.
 
 #### Parameters
 * __Category__: The games category. (required)
 * __Sorted By__: The order of the games queried (Default value: Date)
 * __Platform__: The platfrom of games. (Default value: "all")
-* __Page Number__: Query games from the specified page (Default value: null)
+* __Page Number__: Query games from the specified page (Default value: 0)
 
 ```dart
   //Return a list, wich contains games name and platfrom by one specified category (Action, First-Person, etc..)
