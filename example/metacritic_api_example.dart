@@ -2,6 +2,7 @@ import 'package:metacritic_request/enums.dart';
 import 'package:metacritic_request/metacritic_entity.dart';
 import 'package:metacritic_request/metacritic_api.dart';
 import 'package:metacritic_request/review.dart';
+import 'package:http/http.dart' as HTTP;
 
 void main() {
   test();

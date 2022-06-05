@@ -6,6 +6,7 @@ import 'enums.dart';
 import 'metacritic_entity.dart';
 
 class MetaCriticAPI {
+  //Sigleton pattern
   static MetaCriticAPI instance = new MetaCriticAPI();
 
   //The page url
@@ -520,76 +521,26 @@ class MetaCriticAPI {
   }
 
   ///Return a list, wich contains games name and platfrom by one specified category (Action, First-Person, etc..)
-  ///Category: Game Category
-  ///Sorted By: Sort
-  ///Platfrom: The specified platfrom
-  ///Page Number: Get just the selected page
   Future<List<String>> getGamesByCategory({
     required GameCategory category,
     SortedBy sortedBy = SortedBy.Date,
     String platform = "all",
-    int? pageNumber = null,
+    int pageNumber = 0,
   }) async {
     //The results
     List<String> _results = [];
-
-    //The games structure section numbers
-    List<String> _pageSections = ["one", "two", "three", "four"];
 
     if (platform != "all") {
       platform = Platfroms.Instance.getPlatfromByName(platform);
     }
 
-    if (pageNumber != null) {
-      //Set the URL
-      Uri _currentPageURL = Uri.https(
-          "www.metacritic.com",
-          "/browse/games/genre/${sortedBy.name.toLowerCase()}/${category.name.toLowerCase()}/${_nameFormatToURL(platform)}",
-          {"page": "$pageNumber"});
+    //Set the URL
+    Uri _currentPageURL = Uri.https(
+        "www.metacritic.com",
+        "/browse/games/genre/${sortedBy.name.toLowerCase()}/${category.name.toLowerCase()}/${_nameFormatToURL(platform)}",
+        {"page": "$pageNumber"});
 
-      //Send the request
-      HTTP.Response _response = await HTTP.get(_currentPageURL);
-
-      for (int i = 0; i < _pageSections.length; i++) {
-        String endTag = i < _pageSections.length - 1
-            ? "<div class=\"browse_list_wrapper ${_pageSections[i + 1]}"
-            : "<div class=\"marg_top1\">";
-
-        //Trim for the data
-        String temp = await _getDataFrom(_response.body,
-            "<div class=\"browse_list_wrapper ${_pageSections[i]}", endTag);
-
-        temp = await _getDataFrom(
-            temp, "<table class=\"clamp-list\">", "</table>");
-
-        temp = temp.trim();
-
-        //Split the string to games sections
-        List<String> gamesDatas = temp.split("<tr class=\"spacer\"></tr>");
-
-        //Get the games (name + platfrom)
-        for (int j = 0; j < gamesDatas.length; j++) {
-          if (!gamesDatas[j].contains("class=\"title\"><h3>") ||
-              !gamesDatas[j].contains("class=\"title\"><h3>")) {
-            continue;
-          }
-
-          //Get name
-          String name = await _getDataFrom(
-              gamesDatas[j], "class=\"title\"><h3>", "</h3>");
-
-          //Get platform
-          String _platform = await _getDataFrom(
-              gamesDatas[j], "<span class=\"data\">", "</span>");
-
-          _results.add("${name}->${_platform.trim()}");
-        }
-
-        print("");
-      }
-    }
-
-    return _results;
+    return await _getCategoryResultInPage(_currentPageURL);
   }
 
   ///Return a list, wich contains cover image(s).
@@ -739,5 +690,57 @@ class MetaCriticAPI {
     }
 
     return result;
+  }
+
+  Future<List<String>> _getCategoryResultInPage(Uri _currentPageURL) async {
+    List<String> _results = [];
+
+    //The games structure section numbers
+    List<String> _pageSections = ["one", "two", "three", "four"];
+
+    //Send the request
+    HTTP.Response _response = await HTTP.get(_currentPageURL);
+
+    //If the page not contains any game, return a empty list
+    if (_response.body.contains("No games found.") ||
+        _response.statusCode != 200) return [];
+
+    for (int i = 0; i < _pageSections.length; i++) {
+      String endTag = i < _pageSections.length - 1
+          ? "<div class=\"browse_list_wrapper ${_pageSections[i + 1]}"
+          : "<div class=\"marg_top1\">";
+
+      //Trim for the data
+      String temp = await _getDataFrom(_response.body,
+          "<div class=\"browse_list_wrapper ${_pageSections[i]}", endTag);
+
+      temp =
+          await _getDataFrom(temp, "<table class=\"clamp-list\">", "</table>");
+
+      temp = temp.trim();
+
+      //Split the string to games sections
+      List<String> gamesDatas = temp.split("<tr class=\"spacer\"></tr>");
+
+      //Get the games (name + platfrom)
+      for (int j = 0; j < gamesDatas.length; j++) {
+        if (!gamesDatas[j].contains("class=\"title\"><h3>") ||
+            !gamesDatas[j].contains("class=\"title\"><h3>")) {
+          continue;
+        }
+
+        //Get name
+        String name =
+            await _getDataFrom(gamesDatas[j], "class=\"title\"><h3>", "</h3>");
+
+        //Get platform
+        String _platform = await _getDataFrom(
+            gamesDatas[j], "<span class=\"data\">", "</span>");
+
+        _results.add("${name}->${_platform.trim()}");
+      }
+    }
+
+    return _results;
   }
 }
