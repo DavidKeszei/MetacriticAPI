@@ -2,7 +2,6 @@ import 'package:metacritic_request/enums.dart';
 import 'package:metacritic_request/metacritic_entity.dart';
 import 'package:metacritic_request/metacritic_api.dart';
 import 'package:metacritic_request/review.dart';
-import 'package:http/http.dart' as HTTP;
 
 void main() {
   test();
@@ -32,7 +31,7 @@ void test() async {
   //Example
   //  - Name: God Of War,
   //  - Platform: PS4 / Playstation 4
-  //  - Search Page Index: null (We search every existing pages)
+  //  - Max Result: null (We search every existing pages)
   //Result: 6 game
   //Result format: "game name->platform"
   List<String> entities = await MetaCriticAPI.instance
