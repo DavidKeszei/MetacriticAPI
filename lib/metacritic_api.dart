@@ -449,12 +449,12 @@ class MetaCriticAPI {
   Future<List<String>> searchFor({
     String platform = "",
     String name = "",
-    int? pageIndex = null,
+    int? maxresult = null,
   }) async {
     name = name.toLowerCase().split(' ').join(' ');
 
     List<String> results = [];
-    int page = pageIndex ?? 0;
+    int page = 0;
 
     do {
       //Metacritic URL appending
@@ -466,7 +466,7 @@ class MetaCriticAPI {
 
       //If connection status is success
       if (response.statusCode != 200) {
-        throw new Exception("The connection is field!");
+        throw new Exception("The connection is fail!");
       }
 
       //Get the required text section
@@ -476,6 +476,8 @@ class MetaCriticAPI {
       //Selected informations
       List<String> temp = resultText.split("<div class=\"result_wrap\">");
 
+      //If the result is less than 2, then break the, because this is a not constains
+      //required informations for us to further process
       if (temp.length < 2) {
         break;
       }
@@ -509,7 +511,8 @@ class MetaCriticAPI {
         results.add("${_name}->${_platform}");
       }
 
-      if (pageIndex == page && pageIndex != null) {
+      //If we reached the max result
+      if (maxresult == page && maxresult != null) {
         break;
       }
 
@@ -531,7 +534,7 @@ class MetaCriticAPI {
     List<String> _results = [];
 
     if (platform != "all") {
-      platform = Platfroms.Instance.getPlatfromByName(platform);
+      platform = Platfroms.Instance.getPlatfromByName(platform).toLowerCase();
     }
 
     //Set the URL
